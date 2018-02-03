@@ -83,5 +83,28 @@ echo json_encode($response->render());
 exit;
 ```
 
+### Validating Requests
+Amazon will require requests to be validated and verified as part of the certification process. There are
+two functions that can help meet the certification requirements.
+
+#### Validate Signature
+```php
+$content = $request->getContent(); // raw input data in Laravel
+$jsonDataAsArray = $request->json()->all(); // This is how you would retrieve this with Laravel
+
+$alexaRequest = \Alexa\Request\Request::fromData($jsonDataAsArray);
+
+$alexaRequest->validateSignature($content); // throws error if signature is invalid
+```
+
+#### Validate Timestamp
+```php
+$jsonDataAsArray = $request->json()->all(); // This is how you would retrieve this with Laravel
+
+$alexaRequest = \Alexa\Request\Request::fromData($jsonDataAsArray);
+
+$alexaRequest->validate(); // throws error if timestamp is too old
+```
+
 ## TODO
 * Verify request timestamp integrity automatically
