@@ -8,6 +8,11 @@ use DateTime;
 
 abstract class Request {
 	const TIMESTAMP_VALID_TOLERANCE_SECONDS = 30;
+	const SIGNATURE_VALID_PROTOCOL = 'https';
+	const SIGNATURE_VALID_HOSTNAME = 's3.amazonaws.com';
+	const SIGNATURE_VALID_PATH = '/echo.api/';
+	const SIGNATURE_VALID_PORT = 443;
+	const CERT_SUBJECT_ALT_NAME = 'echo-api.amazon.com';
 
 	public $requestId;
 	public $timestamp;
@@ -49,9 +54,46 @@ abstract class Request {
 		}
 	}
 
+	public function validateCertificateUrl() {
+		if (!$this->cert) {
+			throw new RuntimeException('Certificate was not provided.');
+		}
+
+		$url = parse_url($this->cert);
+
+		if ($url['scheme'] !== static::SIGNATURE_VALID_PROTOCOL) {
+			throw new InvalidArgumentException('Protocol isn\'t secure. Request isn\'t from Alexa.');
+		} else if ($url['host'] !== static::SIGNATURE_VALID_HOSTNAME) {
+			throw new InvalidArgumentException('Certificate isn\'t from Amazon. Request isn\'t from Alexa.');
+		} else if (strrpos($url['path'], static::SIGNATURE_VALID_PATH, -strlen($url['path'])) !== 0) {
+			throw new InvalidArgumentException('Certificate isn\'t in "'.static::SIGNATURE_VALID_PATH.'" folder. Request isn\'t from Alexa.');
+		} else if (isset($url['port']) && $url['port'] !== static::SIGNATURE_VALID_PORT) {
+			throw new InvalidArgumentException('Port isn\'t ' . static::SIGNATURE_VALID_PORT. '. Request isn\'t from Alexa.');
+		}
+	}
+
+	public function validateCertificateDetails() {
+		if (!$this->cert) {
+			throw new InvalidArgumentException('Certificate was not provided.');
+		}
+
+		$pem = file_get_contents($this->cert);
+		$details = openssl_x509_parse($pem);
+
+		var_dump($details);
+
+		if (!strstr($details['extensions']['subjectAltName'], static::CERT_SUBJECT_ALT_NAME) ) {
+			throw new InvalidArgumentException('Certificate isn\'t from Amazon. Request isn\'t from Alexa.');
+		} else if ( $details['validFrom_time_t'] > time() ) {
+			throw new InvalidArgumentException('Certificate isn\'t valid yet.');
+		} else if ( $details['validTo_time_t'] < time() ) {
+			throw new InvalidArgumentException('Certificate has expired.');
+		}
+	}
+
 	public function validateSignature($data = null) {
 		if (!$this->cert || !$this->signature) {
-			throw new RuntimeException('Request signature was not provided.');
+			throw new InvalidArgumentException('Request signature was not provided.');
 		}
 
 		$pem = file_get_contents($this->cert);
@@ -59,7 +101,7 @@ abstract class Request {
 		$verify = openssl_verify($data, base64_decode($this->signature), $pubKey, 'sha1');
 
 		if ($verify !== 1) {
-			throw new RuntimeException('Request signature was not valid.');
+			throw new InvalidArgumentException('Request signature was not valid.');
 		}
 	}
 }
