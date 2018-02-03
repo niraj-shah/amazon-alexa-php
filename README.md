@@ -87,6 +87,14 @@ exit;
 Amazon will require requests to be validated and verified as part of the certification process. There are
 two functions that can help meet the certification requirements.
 
+#### Validate Certificate
+```php
+$alexaRequest = \Alexa\Request\Request::fromData($json);
+
+$alexaRequest->validateCertificateUrl(); // throws exception if certificate URL doesn't match specification
+$alexaRequest->validateCertificateDetails(); // throws exception if certificate details are invalid
+```
+
 #### Validate Signature
 ```php
 $content = $request->getContent(); // raw input data in Laravel
