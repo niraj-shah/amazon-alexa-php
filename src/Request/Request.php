@@ -77,12 +77,12 @@ abstract class Request {
 			throw new InvalidArgumentException('Certificate was not provided.');
 		}
 
-		$pem = file_get_contents($this->cert);
+		$pem = @file_get_contents($this->cert);
 		$details = openssl_x509_parse($pem);
 
-		var_dump($details);
-
-		if (!strstr($details['extensions']['subjectAltName'], static::CERT_SUBJECT_ALT_NAME) ) {
+		if ($details === false) {
+			throw new InvalidArgumentException('Certificate could not be loaded. Request isn\'t from Alexa.');
+		} else if (!strstr($details['extensions']['subjectAltName'], static::CERT_SUBJECT_ALT_NAME) ) {
 			throw new InvalidArgumentException('Certificate isn\'t from Amazon. Request isn\'t from Alexa.');
 		} else if ( $details['validFrom_time_t'] > time() ) {
 			throw new InvalidArgumentException('Certificate isn\'t valid yet.');
@@ -96,7 +96,7 @@ abstract class Request {
 			throw new InvalidArgumentException('Request signature was not provided.');
 		}
 
-		$pem = file_get_contents($this->cert);
+		$pem = @file_get_contents($this->cert);
 		$pubKey = openssl_pkey_get_public($pem);
 		$verify = openssl_verify($data, base64_decode($this->signature), $pubKey, 'sha1');
 
