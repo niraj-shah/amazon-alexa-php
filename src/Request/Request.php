@@ -19,6 +19,8 @@ abstract class Request {
 	public $user;
 	public $cert;
 	public $signature;
+	public $access_token;
+	public $endpoint;
 
 	public function __construct($data) {
 		$this->requestId = $data['request']['requestId'];
@@ -26,6 +28,8 @@ abstract class Request {
 		$this->user = new User($data['session']['user']);
 		$this->cert = $_SERVER['HTTP_SIGNATURECERTCHAINURL'] ?: null;
 		$this->signature = $_SERVER['HTTP_SIGNATURE'] ?: null;
+		$this->access_token = $data['context']['System']['apiAccessToken'];
+		$this->endpoint = $data['context']['System']['apiEndpoint'];
 	}
 
 	public static function fromData($data) {
